@@ -1,5 +1,6 @@
 
 import MacroExamplesLib
+import RegexBuilder
 
 let x = 1
 let y = 2
@@ -36,3 +37,12 @@ testStringify()
 blockAdd()
 produceWarning()
 testFontLiteral()
+
+let (regex, auxiliary) = #embed(
+  Regex {
+    OneOrMore(.word)
+  }
+)
+print(regex)
+print(auxiliary)
+print("abc".wholeMatch(of: regex)!.0)

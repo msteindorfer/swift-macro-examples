@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		039EBA7F296749670090A470 /* RegexMacro.swift in Sources */ = {isa = PBXBuildFile; fileRef = 039EBA7E296749670090A470 /* RegexMacro.swift */; };
 		BD752BE5294D3BEC00D00A2E /* WarningMacro.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD752BE4294D3BEC00D00A2E /* WarningMacro.swift */; };
 		BD752BE7294D461B00D00A2E /* FontLiteralMacro.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD752BE6294D461B00D00A2E /* FontLiteralMacro.swift */; };
 		BD841F82294CE1F600DA4D81 /* AddBlocker.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD841F81294CE1F600DA4D81 /* AddBlocker.swift */; };
@@ -62,6 +63,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		039EBA7E296749670090A470 /* RegexMacro.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RegexMacro.swift; sourceTree = "<group>"; };
 		BD3FE05C296611F200426C82 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		BD752BE4294D3BEC00D00A2E /* WarningMacro.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WarningMacro.swift; sourceTree = "<group>"; };
 		BD752BE6294D461B00D00A2E /* FontLiteralMacro.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FontLiteralMacro.swift; sourceTree = "<group>"; };
@@ -114,6 +116,7 @@
 			isa = PBXGroup;
 			children = (
 				BDF5AFF72947E95C00FA119B /* StringifyMacro.swift */,
+				039EBA7E296749670090A470 /* RegexMacro.swift */,
 				BD841F81294CE1F600DA4D81 /* AddBlocker.swift */,
 				BD752BE4294D3BEC00D00A2E /* WarningMacro.swift */,
 				BD752BE6294D461B00D00A2E /* FontLiteralMacro.swift */,
@@ -353,6 +356,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				BD841F82294CE1F600DA4D81 /* AddBlocker.swift in Sources */,
+				039EBA7F296749670090A470 /* RegexMacro.swift in Sources */,
 				BD752BE5294D3BEC00D00A2E /* WarningMacro.swift in Sources */,
 				BDF5AFF82947E95C00FA119B /* StringifyMacro.swift in Sources */,
 				BD752BE7294D461B00D00A2E /* FontLiteralMacro.swift in Sources */,
@@ -405,7 +409,6 @@
 				DYLIB_CURRENT_VERSION = 1;
 				EXECUTABLE_PREFIX = lib;
 				MACH_O_TYPE = staticlib;
-				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				OTHER_SWIFT_FLAGS = "-Xfrontend -enable-experimental-feature -Xfrontend Macros -Xfrontend -load-plugin-library -Xfrontend ${BUILD_DIR}/${CONFIGURATION}/libMacroExamplesPlugin.dylib";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -423,7 +426,6 @@
 				DYLIB_CURRENT_VERSION = 1;
 				EXECUTABLE_PREFIX = lib;
 				MACH_O_TYPE = staticlib;
-				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				OTHER_SWIFT_FLAGS = "-Xfrontend -enable-experimental-feature -Xfrontend Macros -Xfrontend -load-plugin-library -Xfrontend ${BUILD_DIR}/${CONFIGURATION}/libMacroExamplesPlugin.dylib";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -481,7 +483,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 12.0;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -535,7 +537,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 12.0;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = macosx;

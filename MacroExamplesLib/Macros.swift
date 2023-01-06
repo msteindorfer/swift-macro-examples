@@ -26,3 +26,6 @@ public protocol ExpressibleByFontLiteral {
 /// Font literal similar to, e.g., #colorLiteral.
 @freestanding(expression) public macro fontLiteral<T>(name: String, size: Int, weight: FontWeight) -> T = #externalMacro(module: "MacroExamplesPlugin", type: "FontLiteralMacro")
   where T: ExpressibleByFontLiteral
+
+/// Lower the Swift Regex DSL to the matching engine intermediate language byte-code.
+public macro embed<T>(_ value: Regex<T>) -> (Regex<T>, String) = MacroExamplesPlugin.RegexMacro
