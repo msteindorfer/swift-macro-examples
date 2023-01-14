@@ -2,9 +2,9 @@ import SwiftSyntax
 import SwiftSyntaxBuilder
 import _SwiftSyntaxMacros
 
-import RegexBuilder         // potentially relevant @_spi(RegexBenchmark)
+import RegexBuilder
 import _RegexParser
-import _StringProcessing    // potentially relevant @_spi(RegexBuilder)
+import _StringProcessing
 
 public struct RegexMacro: ExpressionMacro {
   public static func expansion(
@@ -15,12 +15,15 @@ public struct RegexMacro: ExpressionMacro {
     }
 
     let regexComponent = buildRegex(argument)
-    _openExistential(regexComponent, do: openExistentialHelper)
-    _openExistential(regexComponent, do: openExistentialMatchHelper)
 
-    return "(\(argument), \(literal: argument.description))"
+    guard let transformedRegexSourceCodeLiteral = try? _openExistential(regexComponent, do: lowerRegexHelper) else {
+      return "\(argument.withoutTrivia())"
+    }
+
+    return "\(transformedRegexSourceCodeLiteral)"
   }
 
+  // TODO: how to apply `_openExistential` when needing to concatenate two existential values like in `RegexComponentBuilder.buildPartialBlock(accumulated:next:)`
   static func buildRegex(_ node: FunctionCallExprSyntax) -> any RegexComponent {
     let regexComponents = node.trailingClosure!.statements.map {
       let node = $0.item.as(FunctionCallExprSyntax.self)!
@@ -68,20 +71,29 @@ public struct RegexMacro: ExpressionMacro {
   }
 }
 
-func openExistentialHelper<T: RegexComponent>(_ regexComponent: T) {
+private func lowerRegexHelper<T: RegexComponent>(_ regexComponent: T) throws -> String {
   let regex = regexComponent.regex
 
-  print(regex)
-}
+  if let instructions: [UInt64] = try? regex.encodeLoweredProgramInstructions(),
+     let descriptions: [String] = try? regex.encodeLoweredProgramInstructions() {
 
-func openExistentialMatchHelper<T: RegexComponent>(_ regexComponent: T) {
-  let regex = regexComponent.regex
+    let zipped = zip(instructions, descriptions)
 
-  if let match = try? regex.wholeMatch(in: "Hello World") {
-    print("Matched '\(match.output)'.")
+    let formattedInstructionBlock = zipped.map { (instruction, description) in
+      "  0x\(String(instruction, radix: 16, uppercase: true)), // > \(description)"
+    }.joined(separator: "\n")
+
+    return """
+    Regex<Substring>(instructions: [
+    \(formattedInstructionBlock)
+    ] as [UInt64])
+    """
   }
+
+  throw CustomError.message("Unable to extract lowered program instructions.")
 }
 
-func buildPartialBlockHelper<T: RegexComponent>(_ regexComponent: T) -> Regex<T.RegexOutput> {
+// TODO: check why this function leads to a compilation error when part of macro implementation as `private static func`
+private func buildPartialBlockHelper<T: RegexComponent>(_ regexComponent: T) -> Regex<T.RegexOutput> {
   RegexComponentBuilder.buildPartialBlock(first: regexComponent)
 }
