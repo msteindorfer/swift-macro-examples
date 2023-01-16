@@ -30,7 +30,29 @@ final class MacroExamplesPluginTests: XCTestCase {
     )
   }
 
-  func testRegexEmbeddingWithOneQuantification() {
+  func testRegexPatternEmbeddingWithOneQuantification() {
+    let sf: SourceFileSyntax =
+      """
+      #embed(Regex("\\w+"))
+      """
+    var context = MacroExpansionContext(
+      moduleName: "MyModule", fileName: "test.swift"
+    )
+    let transformedSF = sf.expand(macros: testMacros, in: &context)
+    XCTAssertEqual(
+      transformedSF.description,
+      """
+      Regex<Substring>(instructions: [
+        0x1500000000000000, // > [0] beginCapture 0
+        0x1400002008040008, // > [1] quantify builtin 1 unbounded
+        0x1600000000000000, // > [2] endCapture 0
+        0x1A00000000000000, // > [3] accept
+      ] as [UInt64])
+      """
+    )
+  }
+
+  func testRegexDslEmbeddingWithOneQuantification() {
     let sf: SourceFileSyntax =
       """
       #embed(
@@ -56,7 +78,7 @@ final class MacroExamplesPluginTests: XCTestCase {
     )
   }
 
-  func testRegexEmbeddingWithMultipleQuantifications() {
+  func testRegexDslEmbeddingWithMultipleQuantifications() {
     let sf: SourceFileSyntax =
       """
       #embed(

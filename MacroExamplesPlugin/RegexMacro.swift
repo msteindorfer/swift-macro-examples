@@ -10,11 +10,13 @@ public struct RegexMacro: ExpressionMacro {
   public static func expansion(
     of node: MacroExpansionExprSyntax, in context: inout MacroExpansionContext
   ) -> ExprSyntax {
-    guard let argument = node.argumentList.first?.expression.as(FunctionCallExprSyntax.self) else {
-      fatalError("compiler bug: the macro does not have any arguments")
+    guard node.argumentList.count == 1, let argument = node.argumentList.first?.expression.as(FunctionCallExprSyntax.self) else {
+      fatalError("compiler bug: the macro does not have exactly one argument")
     }
 
-    let regexComponent = buildRegex(argument)
+    guard let regexComponent = try? buildRegex(argument) else {
+      return "\(argument.withoutTrivia())"
+    }
 
     guard let transformedRegexSourceCodeLiteral = try? _openExistential(regexComponent, do: lowerRegexHelper) else {
       return "\(argument.withoutTrivia())"
@@ -24,7 +26,21 @@ public struct RegexMacro: ExpressionMacro {
   }
 
   // TODO: how to apply `_openExistential` when needing to concatenate two existential values like in `RegexComponentBuilder.buildPartialBlock(accumulated:next:)`
-  static func buildRegex(_ node: FunctionCallExprSyntax) -> any RegexComponent {
+  static func buildRegex(_ node: FunctionCallExprSyntax) throws -> any RegexComponent {
+
+    // MARK: Handle `init(_ pattern: String) throws`
+
+    if node.argumentList.count == 1, let stringLiteralExpr = node.argumentList.first?.expression.as(StringLiteralExpr.self), node.trailingClosure == nil {
+      do {
+        let pattern = String(describing: stringLiteralExpr.segments)
+        return try Regex(pattern)
+      } catch {
+        throw CustomError.message("`init(_ pattern: String)` threw")
+      }
+    }
+
+    // MARK: Handle Regex DSL composition with trailing closures
+
     let regexComponents = node.trailingClosure!.statements.map {
       let node = $0.item.as(FunctionCallExprSyntax.self)!
       return buildQuantification(node)
