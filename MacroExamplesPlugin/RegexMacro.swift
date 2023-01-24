@@ -19,7 +19,8 @@ public struct RegexMacro: ExpressionMacro {
     }
 
     // TODO: build up `RegexComponent.regex` instead of `RegexComponent`?
-    guard let argument = argumentExpr.as(FunctionCallExprSyntax.self), let regexComponent = try? buildRegex(argument) else {
+    guard let argument = argumentExpr.as(FunctionCallExprSyntax.self),
+          let regexComponent = try? matchAndEvaluateRegex(argument) else {
       return "\(argumentExpr.withoutTrivia())"
     }
 
@@ -31,7 +32,7 @@ public struct RegexMacro: ExpressionMacro {
   }
 
   // TODO: how to apply `_openExistential` when needing to concatenate two existential values like in `RegexComponentBuilder.buildPartialBlock(accumulated:next:)`
-  static func buildRegex(_ node: FunctionCallExprSyntax) throws -> any RegexComponent {
+  static func matchAndEvaluateRegex(_ node: FunctionCallExprSyntax) throws -> any RegexComponent {
 
     // MARK: Handle `init(_ pattern: String) throws`
 
@@ -51,7 +52,7 @@ public struct RegexMacro: ExpressionMacro {
         throw MatchError.unspecified
       }
 
-      guard let regexComponent = try? buildQuantification(node) else {
+      guard let regexComponent = try? matchAndEvaluateQuantification(node) else {
         throw MatchError.unspecified
       }
 
@@ -73,7 +74,7 @@ public struct RegexMacro: ExpressionMacro {
   // TODO: OneOrMore|ZeroOrMore|Optionally: component x behavior
   // TODO: OneOrMore|ZeroOrMore|Optionally:             behavior x componentBuilder
   // TODO: Repeat:                          component x count (ecetera)
-  static func buildQuantification(_ node: ExprSyntax) throws -> any RegexComponent {
+  static func matchAndEvaluateQuantification(_ node: ExprSyntax) throws -> any RegexComponent {
     guard let node = node.as(FunctionCallExprSyntax.self),
           let identifierExpr = node.calledExpression.as(IdentifierExpr.self) else {
       throw MatchError.unspecified
@@ -82,7 +83,7 @@ public struct RegexMacro: ExpressionMacro {
     let firstArgumentIndex = node.argumentList.index(atOffset: 0)
     let firstArgumentExpr = node.argumentList[firstArgumentIndex].expression
 
-    guard let regexComponent = try? buildCharacterClass(firstArgumentExpr) else {
+    guard let regexComponent = try? matchAndEvaluateCharacterClass(firstArgumentExpr) else {
       throw MatchError.unspecified
     }
 
@@ -93,8 +94,8 @@ public struct RegexMacro: ExpressionMacro {
       let secondArgumentIndex = node.argumentList.index(atOffset: 1)
       let secondArgumentExpr = node.argumentList[secondArgumentIndex].expression
 
-      behavior = try? buildRegexRepetitionBehavior(secondArgumentExpr)
-      count = try? buildIntegerLiteral(secondArgumentExpr)
+      behavior = try? matchAndEvaluateRegexRepetitionBehavior(secondArgumentExpr)
+      count = try? matchAndEvaluateIntegerLiteral(secondArgumentExpr)
     }
 
     switch identifierExpr.identifier.text {
@@ -113,7 +114,7 @@ public struct RegexMacro: ExpressionMacro {
     }
   }
 
-  static func buildRegexRepetitionBehavior(_ node: ExprSyntax) throws -> RegexRepetitionBehavior {
+  static func matchAndEvaluateRegexRepetitionBehavior(_ node: ExprSyntax) throws -> RegexRepetitionBehavior {
     guard let node = node.as(MemberAccessExprSyntax.self) else {
       throw MatchError.unspecified
     }
@@ -130,7 +131,7 @@ public struct RegexMacro: ExpressionMacro {
     }
   }
 
-  static func buildCharacterClass(_ node: ExprSyntax) throws -> any RegexComponent {
+  static func matchAndEvaluateCharacterClass(_ node: ExprSyntax) throws -> any RegexComponent {
     guard let node = node.as(MemberAccessExprSyntax.self) else {
       throw MatchError.unspecified
     }
@@ -147,7 +148,7 @@ public struct RegexMacro: ExpressionMacro {
     }
   }
 
-  static func buildIntegerLiteral(_ node: ExprSyntax) throws -> Int {
+  static func matchAndEvaluateIntegerLiteral(_ node: ExprSyntax) throws -> Int {
     guard let node = node.as(IntegerLiteralExprSyntax.self) else {
       throw MatchError.unspecified
     }
