@@ -10,16 +10,21 @@ public struct RegexMacro: ExpressionMacro {
   public static func expansion(
     of node: MacroExpansionExprSyntax, in context: inout MacroExpansionContext
   ) -> ExprSyntax {
-    guard node.argumentList.count == 1, let argument = node.argumentList.first?.expression.as(FunctionCallExprSyntax.self) else {
+    guard node.argumentList.count == 1, let argumentExpr = node.argumentList.first?.expression else {
       fatalError("compiler bug: the macro does not have exactly one argument")
     }
 
-    guard let regexComponent = try? buildRegex(argument) else {
-      return "\(argument.withoutTrivia())"
+    guard argumentExpr.is(FunctionCallExprSyntax.self) || argumentExpr.is(RegexLiteralExprSyntax.self) else {
+      fatalError("compiler bug: argument is neither of type `Regex`, nor a regex literal")
+    }
+
+    // TODO: build up `RegexComponent.regex` instead of `RegexComponent`?
+    guard let argument = argumentExpr.as(FunctionCallExprSyntax.self), let regexComponent = try? buildRegex(argument) else {
+      return "\(argumentExpr.withoutTrivia())"
     }
 
     guard let transformedRegexSourceCodeLiteral = try? _openExistential(regexComponent, do: lowerRegexHelper) else {
-      return "\(argument.withoutTrivia())"
+      return "\(argumentExpr.withoutTrivia())"
     }
 
     return "\(transformedRegexSourceCodeLiteral)"
@@ -41,9 +46,16 @@ public struct RegexMacro: ExpressionMacro {
 
     // MARK: Handle Regex DSL composition with trailing closures
 
-    let regexComponents = node.trailingClosure!.statements.map {
-      let node = $0.item.as(FunctionCallExprSyntax.self)!
-      return buildQuantification(node)
+    let regexComponents = try node.trailingClosure!.statements.map {
+      guard let node = $0.item.as(ExprSyntax.self) else {
+        throw MatchError.unspecified
+      }
+
+      guard let regexComponent = try? buildQuantification(node) else {
+        throw MatchError.unspecified
+      }
+
+      return regexComponent
     }
 
     guard let firstRegexComponent = regexComponents.first else { return RegexComponentBuilder.buildBlock() }
@@ -57,23 +69,72 @@ public struct RegexMacro: ExpressionMacro {
     return remainingRegexComponents.reduce(firstPartialBlock, buildNextPartialBlock)
   }
 
-  static func buildQuantification(_ node: FunctionCallExprSyntax) -> any RegexComponent {
-    let identifier = node.calledExpression.as(IdentifierExpr.self)!.identifier
+  // TODO: One:                             component
+  // TODO: OneOrMore|ZeroOrMore|Optionally: component x behavior
+  // TODO: OneOrMore|ZeroOrMore|Optionally:             behavior x componentBuilder
+  // TODO: Repeat:                          component x count (ecetera)
+  static func buildQuantification(_ node: ExprSyntax) throws -> any RegexComponent {
+    guard let node = node.as(FunctionCallExprSyntax.self),
+          let identifierExpr = node.calledExpression.as(IdentifierExpr.self) else {
+      throw MatchError.unspecified
+    }
 
-    let memberAccessExpr = node.argumentList.first!.as(TupleExprElementSyntax.self)!.expression.as(MemberAccessExprSyntax.self)!
-    let regexComponent: any RegexComponent = buildCharacterClass(memberAccessExpr)
+    let firstArgumentIndex = node.argumentList.index(atOffset: 0)
+    let firstArgumentExpr = node.argumentList[firstArgumentIndex].expression
 
-    switch identifier.text {
-    case "ZeroOrMore":
-      return ZeroOrMore(regexComponent)
+    guard let regexComponent = try? buildCharacterClass(firstArgumentExpr) else {
+      throw MatchError.unspecified
+    }
+
+    var behavior: RegexRepetitionBehavior? = nil
+    var count: Int? = nil
+
+    if node.argumentList.count >= 2 {
+      let secondArgumentIndex = node.argumentList.index(atOffset: 1)
+      let secondArgumentExpr = node.argumentList[secondArgumentIndex].expression
+
+      behavior = try? buildRegexRepetitionBehavior(secondArgumentExpr)
+      count = try? buildIntegerLiteral(secondArgumentExpr)
+    }
+
+    switch identifierExpr.identifier.text {
+    case "One":
+      return regexComponent // TODO: check if returning the component directly, instead of `One`, is correct
     case "OneOrMore":
-      return OneOrMore(regexComponent)
+      return OneOrMore(regexComponent, behavior)  // _BuiltinRegexComponent
+    case "ZeroOrMore":
+      return ZeroOrMore(regexComponent, behavior) // _BuiltinRegexComponent
+    case "Optionally":
+      return Optionally(regexComponent, behavior) // _BuiltinRegexComponent
+    case "Repeat" where count != nil:
+      return Repeat(regexComponent, count: count!)
     default:
-      fatalError()
+      throw MatchError.unspecified
     }
   }
 
-  static func buildCharacterClass(_ node: MemberAccessExprSyntax) -> any RegexComponent {
+  static func buildRegexRepetitionBehavior(_ node: ExprSyntax) throws -> RegexRepetitionBehavior {
+    guard let node = node.as(MemberAccessExprSyntax.self) else {
+      throw MatchError.unspecified
+    }
+
+    switch node.name.text {
+    case "eager":
+      return .eager
+    case "reluctant":
+      return .reluctant
+    case "possessive":
+      return .possessive
+    default:
+      throw MatchError.unspecified
+    }
+  }
+
+  static func buildCharacterClass(_ node: ExprSyntax) throws -> any RegexComponent {
+    guard let node = node.as(MemberAccessExprSyntax.self) else {
+      throw MatchError.unspecified
+    }
+
     switch node.name.text {
     case "any":
       return .any
@@ -82,8 +143,20 @@ public struct RegexMacro: ExpressionMacro {
     case "word":
       return .word
     default:
-      fatalError()
+      throw MatchError.unspecified
     }
+  }
+
+  static func buildIntegerLiteral(_ node: ExprSyntax) throws -> Int {
+    guard let node = node.as(IntegerLiteralExprSyntax.self) else {
+      throw MatchError.unspecified
+    }
+
+    guard let value = Int(node.digits.text) else {
+      throw MatchError.unspecified
+    }
+
+    return value
   }
 }
 
@@ -96,7 +169,10 @@ private func lowerRegexHelper<T: RegexComponent>(_ regexComponent: T) throws -> 
     let zipped = zip(instructions, descriptions)
 
     let formattedInstructionBlock = zipped.map { (instruction, description) in
-      "  0x\(String(instruction, radix: 16, uppercase: true)), // > \(description)"
+      let hexcode = String(instruction, radix: 16, uppercase: true)
+      let padding = String(repeating: "0", count: instruction.bitWidth / 4 - hexcode.count)
+
+      return "  0x\(padding)\(hexcode), // > \(description)"
     }.joined(separator: "\n")
 
     return """
@@ -112,4 +188,12 @@ private func lowerRegexHelper<T: RegexComponent>(_ regexComponent: T) throws -> 
 // TODO: check why this function leads to a compilation error when part of macro implementation as `private static func`
 private func buildPartialBlockHelper<T: RegexComponent>(_ regexComponent: T) -> Regex<T.RegexOutput> {
   RegexComponentBuilder.buildPartialBlock(first: regexComponent)
+}
+
+enum MatchError: Error, CustomStringConvertible {
+  case unspecified
+
+  var description: String {
+    "<unspecified match error>"
+  }
 }

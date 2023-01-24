@@ -30,6 +30,26 @@ final class MacroExamplesPluginTests: XCTestCase {
     )
   }
 
+  func testRegexLiteralEmbeddingWithOneQuantification() {
+    let sf: SourceFileSyntax =
+      #"#embed(/\w+/)"#
+    var context = MacroExpansionContext(
+      moduleName: "MyModule", fileName: "test.swift"
+    )
+    let transformedSF = sf.expand(macros: testMacros, in: &context)
+    XCTAssertEqual(
+      transformedSF.description,
+      """
+      Regex<Substring>(instructions: [
+        0x1500000000000000, // > [0] beginCapture 0
+        0x1400002008040008, // > [1] quantify builtin 1 unbounded
+        0x1600000000000000, // > [2] endCapture 0
+        0x1A00000000000000, // > [3] accept
+      ] as [UInt64])
+      """
+    )
+  }
+
   func testRegexPatternEmbeddingWithOneQuantification() {
     let sf: SourceFileSyntax =
       """
@@ -103,6 +123,61 @@ final class MacroExamplesPluginTests: XCTestCase {
         0x1400002008040008, // > [3] quantify builtin 1 unbounded
         0x1600000000000000, // > [4] endCapture 0
         0x1A00000000000000, // > [5] accept
+      ] as [UInt64])
+      """
+    )
+  }
+
+  func testRegexDslEmbeddingQuantificationOneOrMoreWordReluctant() {
+    let sf: SourceFileSyntax =
+      """
+      #embed(
+        Regex {
+          // NOTE: behavior `.eager` or `.possessive` do not effect
+          // the generated instruction byte-code.
+          OneOrMore(.word, .reluctant)
+        }
+      )
+      """
+    var context = MacroExpansionContext(
+      moduleName: "MyModule", fileName: "test.swift"
+    )
+    let transformedSF = sf.expand(macros: testMacros, in: &context)
+    XCTAssertEqual(
+      transformedSF.description,
+      """
+      Regex<Substring>(instructions: [
+        0x1500000000000000, // > [0] beginCapture 0
+        0x0A00000000000008, // > [1] matchBuiltin <word> (false)
+        0x0F00000000000001, // > [2] save #1  matchBuiltin <word> (false)
+        0x1600000000000000, // > [3] endCapture 0
+        0x1A00000000000000, // > [4] accept
+      ] as [UInt64])
+      """
+    )
+  }
+
+  func testRegexDslEmbeddingQuantificationRepeatWordFiveTimes() {
+    let sf: SourceFileSyntax =
+      """
+      #embed(
+        Regex {
+          Repeat(.word, count: 5)
+        }
+      )
+      """
+    var context = MacroExpansionContext(
+      moduleName: "MyModule", fileName: "test.swift"
+    )
+    let transformedSF = sf.expand(macros: testMacros, in: &context)
+    XCTAssertEqual(
+      transformedSF.description,
+      """
+      Regex<Substring>(instructions: [
+        0x1500000000000000, // > [0] beginCapture 0
+        0x1400002028000008, // > [1] quantify builtin 5 0
+        0x1600000000000000, // > [2] endCapture 0
+        0x1A00000000000000, // > [3] accept
       ] as [UInt64])
       """
     )
