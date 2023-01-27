@@ -19,8 +19,7 @@ public struct RegexMacro: ExpressionMacro {
     }
 
     // TODO: build up `RegexComponent.regex` instead of `RegexComponent`?
-    guard let argument = argumentExpr.as(FunctionCallExprSyntax.self),
-          let regexComponent = try? matchAndEvaluateRegex(argument) else {
+    guard let regexComponent = try? matchAndEvaluateRegex(argumentExpr) else {
       return "\(argumentExpr.withoutTrivia())"
     }
 
@@ -29,6 +28,21 @@ public struct RegexMacro: ExpressionMacro {
     }
 
     return "\(transformedRegexSourceCodeLiteral)"
+  }
+
+  static func matchAndEvaluateRegex(_ node: ExprSyntax) throws -> any RegexComponent {
+    switch node.syntaxNodeType {
+    case _ where node.is(RegexLiteralExprSyntax.self):
+      return try matchAndEvaluateRegex(node.cast(RegexLiteralExprSyntax.self))
+    case _ where node.is(FunctionCallExprSyntax.self):
+      return try matchAndEvaluateRegex(node.cast(FunctionCallExprSyntax.self))
+    default:
+      throw MatchError.unspecified
+    }
+  }
+
+  static func matchAndEvaluateRegex(_ node: RegexLiteralExprSyntax) throws -> any RegexComponent {
+    throw MatchError.unspecified // unsupported, not yet implemented
   }
 
   // TODO: how to apply `_openExistential` when needing to concatenate two existential values like in `RegexComponentBuilder.buildPartialBlock(accumulated:next:)`

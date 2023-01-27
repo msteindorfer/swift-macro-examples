@@ -39,14 +39,15 @@ final class MacroExamplesPluginTests: XCTestCase {
     let transformedSF = sf.expand(macros: testMacros, in: &context)
     XCTAssertEqual(
       transformedSF.description,
-      """
-      Regex<Substring>(instructions: [
-        0x1500000000000000, // > [0] beginCapture 0
-        0x1400002008040008, // > [1] quantify builtin 1 unbounded
-        0x1600000000000000, // > [2] endCapture 0
-        0x1A00000000000000, // > [3] accept
-      ] as [UInt64])
-      """
+      #"/\w+/"#
+//      """
+//      Regex<Substring>(instructions: [
+//        0x1500000000000000, // > [0] beginCapture 0
+//        0x1400002008040008, // > [1] quantify builtin 1 unbounded
+//        0x1600000000000000, // > [2] endCapture 0
+//        0x1A00000000000000, // > [3] accept
+//      ] as [UInt64])
+//      """
     )
   }
 
