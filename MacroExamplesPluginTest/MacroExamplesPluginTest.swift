@@ -30,6 +30,7 @@ final class MacroExamplesPluginTests: XCTestCase {
     )
   }
 
+  // TODO: implement lowering of regex literals, currently the literal itself is returned
   func testRegexLiteralEmbeddingWithOneQuantification() {
     let sf: SourceFileSyntax =
       #"#embed(/\w+/)"#
@@ -40,14 +41,6 @@ final class MacroExamplesPluginTests: XCTestCase {
     XCTAssertEqual(
       transformedSF.description,
       #"/\w+/"#
-//      """
-//      Regex<Substring>(instructions: [
-//        0x1500000000000000, // > [0] beginCapture 0
-//        0x1400002008040008, // > [1] quantify builtin 1 unbounded
-//        0x1600000000000000, // > [2] endCapture 0
-//        0x1A00000000000000, // > [3] accept
-//      ] as [UInt64])
-//      """
     )
   }
 
