@@ -73,7 +73,7 @@ public struct RegexMacro: ExpressionMacro {
   // TODO: One:                             component
   // TODO: OneOrMore|ZeroOrMore|Optionally: component x behavior
   // TODO: OneOrMore|ZeroOrMore|Optionally:             behavior x componentBuilder
-  // TODO: Repeat:                          component x count (ecetera)
+  // TODO: Repeat:                          component x count (etcetera)
   static func matchAndEvaluateQuantification(_ node: ExprSyntax) throws -> any RegexComponent {
     guard let node = node.as(FunctionCallExprSyntax.self),
           let identifierExpr = node.calledExpression.as(IdentifierExpr.self) else {
