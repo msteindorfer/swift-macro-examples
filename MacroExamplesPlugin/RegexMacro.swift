@@ -15,7 +15,7 @@ public struct RegexMacro: ExpressionMacro {
       return eraseMacro(from: node)
     }
 
-    guard let transformedRegexSourceCodeLiteral = try? _openExistential(regexComponent, do: lowerRegexInstructionsHelper) else {
+    guard let transformedRegexSourceCodeLiteral = try? _openExistential(regexComponent, do: lowerRegexHelper) else {
       return eraseMacro(from: node)
     }
 
