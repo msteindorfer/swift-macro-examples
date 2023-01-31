@@ -177,6 +177,28 @@ final class MacroExamplesPluginTests: XCTestCase {
     )
   }
 
+  // TODO: add support, currently bails out
+  func testRegexDslEmbeddingQuantificationOneOrMoreAny() {
+    let sf: SourceFileSyntax =
+      """
+      #regex {
+        OneOrMore(.any)
+      }
+      """
+    var context = MacroExpansionContext(
+      moduleName: "MyModule", fileName: "test.swift"
+    )
+    let transformedSF = sf.expand(macros: testMacros, in: &context)
+    XCTAssertEqual(
+      transformedSF.description,
+      """
+      Regex {
+        OneOrMore(.any)
+      }
+      """
+    )
+  }
+
   func testRegexDslEmbeddingQuantificationOneOrMoreWordReluctant() {
     let sf: SourceFileSyntax =
       """
