@@ -15,7 +15,7 @@ public struct RegexMacro: ExpressionMacro {
       return eraseMacro(from: node)
     }
 
-    guard let transformedRegexSourceCodeLiteral = try? _openExistential(regexComponent, do: lowerRegexHelper) else {
+    guard let transformedRegexSourceCodeLiteral = try? _openExistential(regexComponent, do: lowerRegexInstructionsHelper) else {
       return eraseMacro(from: node)
     }
 
@@ -159,7 +159,7 @@ public struct RegexMacro: ExpressionMacro {
   }
 }
 
-private func lowerRegexHelper<T: RegexComponent>(_ regexComponent: T) throws -> String {
+private func lowerRegexInstructionsHelper<T: RegexComponent>(_ regexComponent: T) throws -> String {
   let regex = regexComponent.regex
 
   if let instructions: [UInt64] = try? regex.encodeLoweredProgramInstructions(),
@@ -178,6 +178,32 @@ private func lowerRegexHelper<T: RegexComponent>(_ regexComponent: T) throws -> 
     Regex<Substring>(instructions: [
     \(formattedInstructionBlock)
     ] as [UInt64])
+    """
+  }
+
+  throw CustomError.message("Unable to extract lowered program instructions.")
+}
+
+private func lowerRegexHelper<T: RegexComponent>(_ regexComponent: T) throws -> String {
+  let regex = regexComponent.regex
+
+  if let bytes: [UInt8] = try? regex.encodeLoweredProgram() {
+    let strideLength = 8
+    let formattedBytesBlock = stride(from: 0, to: bytes.count, by: strideLength).map { strideStart in
+      let strideEnd = Swift.min(strideStart + strideLength, bytes.count)
+
+      return bytes[strideStart..<strideEnd].map { byte in
+        let hexcode = String(byte, radix: 16, uppercase: true)
+        let padding = String(repeating: "0", count: byte.bitWidth / 4 - hexcode.count)
+
+        return "0x\(padding)\(hexcode),"
+      }.joined(separator: " ")
+    }.map { line in "  \(line)" }.joined(separator: "\n")
+
+    return """
+    Regex<Substring>(code: [
+    \(formattedBytesBlock)
+    ])
     """
   }
 
