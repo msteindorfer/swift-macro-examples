@@ -181,8 +181,6 @@ final class MacroExamplesPluginTests: XCTestCase {
     let sf: SourceFileSyntax =
       """
       #regex {
-        // NOTE: behavior `.eager` or `.possessive` do not effect
-        // the generated instruction byte-code.
         OneOrMore(.word, .reluctant)
       }
       """
