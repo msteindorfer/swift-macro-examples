@@ -10,43 +10,23 @@ public struct RegexMacro: ExpressionMacro {
   public static func expansion(
     of node: MacroExpansionExprSyntax, in context: inout MacroExpansionContext
   ) -> ExprSyntax {
-    guard node.argumentList.count == 1, let argumentExpr = node.argumentList.first?.expression else {
-      fatalError("compiler bug: the macro does not have exactly one argument")
-    }
-
-    guard argumentExpr.is(FunctionCallExprSyntax.self) || argumentExpr.is(RegexLiteralExprSyntax.self) else {
-      fatalError("compiler bug: argument is neither of type `Regex`, nor a regex literal")
-    }
-
     // TODO: build up `RegexComponent.regex` instead of `RegexComponent`?
-    guard let regexComponent = try? matchAndEvaluateRegex(argumentExpr) else {
-      return "\(argumentExpr.withoutTrivia())"
+    guard let regexComponent = try? matchAndEvaluateRegex(node) else {
+      return eraseMacro(from: node)
     }
 
     guard let transformedRegexSourceCodeLiteral = try? _openExistential(regexComponent, do: lowerRegexHelper) else {
-      return "\(argumentExpr.withoutTrivia())"
+      return eraseMacro(from: node)
     }
 
     return "\(transformedRegexSourceCodeLiteral)"
   }
 
-  static func matchAndEvaluateRegex(_ node: ExprSyntax) throws -> any RegexComponent {
-    switch node.syntaxNodeType {
-    case _ where node.is(RegexLiteralExprSyntax.self):
-      return try matchAndEvaluateRegex(node.cast(RegexLiteralExprSyntax.self))
-    case _ where node.is(FunctionCallExprSyntax.self):
-      return try matchAndEvaluateRegex(node.cast(FunctionCallExprSyntax.self))
-    default:
-      throw MatchError.unspecified
-    }
+  private static func eraseMacro(from node: MacroExpansionExprSyntax) -> ExprSyntax {
+    return "\(String(describing: node).replacing("#regex", with: "Regex", maxReplacements: 1))"
   }
 
-  static func matchAndEvaluateRegex(_ node: RegexLiteralExprSyntax) throws -> any RegexComponent {
-    throw MatchError.unspecified // unsupported, not yet implemented
-  }
-
-  // TODO: how to apply `_openExistential` when needing to concatenate two existential values like in `RegexComponentBuilder.buildPartialBlock(accumulated:next:)`
-  static func matchAndEvaluateRegex(_ node: FunctionCallExprSyntax) throws -> any RegexComponent {
+  static func matchAndEvaluateRegex(_ node: MacroExpansionExprSyntax) throws -> any RegexComponent {
 
     // MARK: Handle `init(_ pattern: String) throws`
 
@@ -60,6 +40,10 @@ public struct RegexMacro: ExpressionMacro {
     }
 
     // MARK: Handle Regex DSL composition with trailing closures
+
+    guard node.argumentList.count == 0, node.trailingClosure != nil else {
+      throw MatchError.unspecified
+    }
 
     let regexComponents = try node.trailingClosure!.statements.map {
       guard let node = $0.item.as(ExprSyntax.self) else {

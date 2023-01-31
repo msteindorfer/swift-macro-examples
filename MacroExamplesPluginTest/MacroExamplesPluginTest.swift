@@ -7,7 +7,7 @@ import XCTest
 
 var testMacros: [String: Macro.Type] = [
   "stringify" : StringifyMacro.self,
-  "embed" : RegexMacro.self,
+  "regex" : RegexMacro.self,
 ]
 
 final class MacroExamplesPluginTests: XCTestCase {
@@ -30,24 +30,27 @@ final class MacroExamplesPluginTests: XCTestCase {
     )
   }
 
-  // TODO: implement lowering of regex literals, currently the literal itself is returned
-  func testRegexLiteralEmbeddingWithOneQuantification() {
+  func testRegexPatternEmbeddingInvalidRegularExpressionSyntax() {
     let sf: SourceFileSyntax =
-      #"#embed(/\w+/)"#
+      """
+      #regex("? invalid regular expression syntax ?")
+      """
     var context = MacroExpansionContext(
       moduleName: "MyModule", fileName: "test.swift"
     )
     let transformedSF = sf.expand(macros: testMacros, in: &context)
     XCTAssertEqual(
       transformedSF.description,
-      #"/\w+/"#
+      """
+      Regex("? invalid regular expression syntax ?")
+      """
     )
   }
 
   func testRegexPatternEmbeddingWithOneQuantification() {
     let sf: SourceFileSyntax =
       """
-      #embed(Regex("\\w+"))
+      #regex("\\w+")
       """
     var context = MacroExpansionContext(
       moduleName: "MyModule", fileName: "test.swift"
@@ -69,11 +72,9 @@ final class MacroExamplesPluginTests: XCTestCase {
   func testRegexDslEmbeddingWithOneQuantification() {
     let sf: SourceFileSyntax =
       """
-      #embed(
-        Regex {
-          OneOrMore(.word)
-        }
-      )
+      #regex {
+        OneOrMore(.word)
+      }
       """
     var context = MacroExpansionContext(
       moduleName: "MyModule", fileName: "test.swift"
@@ -95,13 +96,11 @@ final class MacroExamplesPluginTests: XCTestCase {
   func testRegexDslEmbeddingWithMultipleQuantifications() {
     let sf: SourceFileSyntax =
       """
-      #embed(
-        Regex {
-          OneOrMore(.word)
-          OneOrMore(.whitespace)
-          OneOrMore(.word)
-        }
-      )
+      #regex {
+        OneOrMore(.word)
+        OneOrMore(.whitespace)
+        OneOrMore(.word)
+      }
       """
     var context = MacroExpansionContext(
       moduleName: "MyModule", fileName: "test.swift"
@@ -125,13 +124,11 @@ final class MacroExamplesPluginTests: XCTestCase {
   func testRegexDslEmbeddingQuantificationOneOrMoreWordReluctant() {
     let sf: SourceFileSyntax =
       """
-      #embed(
-        Regex {
-          // NOTE: behavior `.eager` or `.possessive` do not effect
-          // the generated instruction byte-code.
-          OneOrMore(.word, .reluctant)
-        }
-      )
+      #regex {
+        // NOTE: behavior `.eager` or `.possessive` do not effect
+        // the generated instruction byte-code.
+        OneOrMore(.word, .reluctant)
+      }
       """
     var context = MacroExpansionContext(
       moduleName: "MyModule", fileName: "test.swift"
@@ -154,11 +151,9 @@ final class MacroExamplesPluginTests: XCTestCase {
   func testRegexDslEmbeddingQuantificationRepeatWordFiveTimes() {
     let sf: SourceFileSyntax =
       """
-      #embed(
-        Regex {
-          Repeat(.word, count: 5)
-        }
-      )
+      #regex {
+        Repeat(.word, count: 5)
+      }
       """
     var context = MacroExpansionContext(
       moduleName: "MyModule", fileName: "test.swift"
