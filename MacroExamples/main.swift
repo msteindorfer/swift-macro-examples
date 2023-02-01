@@ -38,11 +38,8 @@ blockAdd()
 produceWarning()
 testFontLiteral()
 
-let (regex, auxiliary) = #embed(
-  Regex {
-    OneOrMore(.word)
-  }
-)
+let regex = #regex {
+  OneOrMore(.word)
+}
 print(regex)
-print(auxiliary)
 print("abc".wholeMatch(of: regex)!.0)
