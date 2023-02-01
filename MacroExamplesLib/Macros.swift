@@ -28,6 +28,6 @@ public protocol ExpressibleByFontLiteral {
   where T: ExpressibleByFontLiteral
 
 /// Lower the Swift Regex DSL to the matching engine intermediate language byte-code.
-public macro regex<R: RegexComponent>(
+@freestanding(expression) public macro regex<R: RegexComponent>(
   @RegexComponentBuilder _ body: () -> R
-) -> Regex<R.RegexOutput> = MacroExamplesPlugin.RegexMacro
+) -> Regex<R.RegexOutput> = #externalMacro(module: "MacroExamplesPlugin", type: "RegexMacro")
